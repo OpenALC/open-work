@@ -172,17 +172,40 @@ Nightly 失败自动开 issue 并打 `nightly-failure` 标签，指派人由 COD
 
 ---
 
-## 八、分支保护规则（`main`）
+## 八、分支策略（不使用 GitHub 分支保护）
 
-必须配置，且写入 `docs/development/branch-protection.md` 记录当前实际设置：
+**当前明确不使用 GitHub 分支保护规则**（Rulesets / Branch protection）。`main` 上没有任何强制检查、审批或推送限制。
 
-- 禁止直接 push，禁止 force push，禁止删除分支
-- 必须通过 PR，至少 1 个 approving review（发布前 `release/*` 要求 2 个）
-- 必须通过状态检查：`commit-lint`, `secrets-scan`, `go-lint`, `go-test`, `go-integration`, `web-lint`, `web-typecheck`, `web-build`, `flutter-analyze`, `flutter-test`, `openapi-lint`, `openapi-breaking`, `migration-check`, `govulncheck`, `codeql`
-- 分支必须与 `main` 同步（`Require branches to be up to date`）
-- 线性历史（squash merge only）
-- 会话过期后需重新批准
-- 管理员同样受约束（`Do not allow bypassing`）
+### 8.1 为什么
+
+| 原因 | 说明 |
+|---|---|
+| 单人维护阶段 | GitHub 不允许批准自己创建的 PR；强制审批会把 `main` 锁死 |
+| 骨架未落地 | required status checks 在骨架文件存在的动作触发前不会被上报，未触发的检查会被判为 pending，从而永久阻塞合并 |
+| 流程尚未稳定 | 早期频繁调整 CI 与目录结构，硬门禁的维护成本高于收益 |
+
+### 8.2 替代约束
+
+保护不靠平台强制，靠流程与自律。以下仍然必须遵守：
+
+| 约束 | 执行方式 |
+|---|---|
+| 提交前跑 `make ci` | 由 [review.md](review.md) §二的自我审查条目约束 |
+| 不直接往 `main` 推未经验证的代码 | 小改动可直推，但必须本地 `make ci` 通过；跨模块或涉及迁移/权限/安全的改动走 PR |
+| 走 PR 的改动必须 CI 全绿才合并 | 以 `pr-summary` job 结论为准，不看单个 job |
+| 不 force push 已推送的 `main` | 避免历史改写导致他人本地分叉 |
+| 保持线性历史 | 合并使用 Squash Merge（仓库设置已强制 squash-only） |
+
+### 8.3 什么情况下重新启用
+
+满足以下全部条件时，重新评估是否启用分支保护：
+
+1. 至少有 2 名具有写权限的维护者（解决自批问题）
+2. M0 骨架落地，`go-*` / `web-*` / `flutter-*` / `openapi-*` / `docker-*` 各组检查能稳定上报
+3. 近 30 天内 `pr.yml` 的基础设施失败率 ≤ 10%
+
+启用时按 [branch-protection.md](branch-protection.md) 的配置表执行，并先只勾选 `commit-lint` 与 `secrets-scan`，其余逐项加入。
+
 
 ---
 
