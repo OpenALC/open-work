@@ -24,10 +24,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Fetch base branch
@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Install gitleaks
@@ -76,7 +76,7 @@ jobs:
       have_api: ${{ steps.skeleton.outputs.api }}
       have_docker: ${{ steps.skeleton.outputs.docker }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Detect skeleton presence
         id: skeleton
         run: |
@@ -87,7 +87,7 @@ jobs:
           [ -f docs/api/openapi.yaml ]          && echo "api=true"     >> "$GITHUB_OUTPUT" || echo "api=false"     >> "$GITHUB_OUTPUT"
           ls deploy/docker/*.Dockerfile >/dev/null 2>&1 \
                                                 && echo "docker=true"  >> "$GITHUB_OUTPUT" || echo "docker=false"  >> "$GITHUB_OUTPUT"
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -126,8 +126,8 @@ jobs:
       matrix:
         task: [fmt, vet, lint, tidy, sqlc]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -139,7 +139,7 @@ jobs:
         run: go vet ./...
       - name: go-lint
         if: matrix.task == 'lint'
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v1.62
           args: --timeout=10m
@@ -161,15 +161,15 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
       - run: go build ./...
       - name: Unit tests
         run: go test -race -shuffle=on -coverprofile=coverage.out -covermode=atomic ./...
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: go-coverage
           path: coverage.out
@@ -205,8 +205,8 @@ jobs:
       OPENWORK_DB_DSN: root:root@tcp(127.0.0.1:3306)/openwork_test?parseTime=true&loc=UTC&multiStatements=true
       OPENWORK_REDIS_ADDR: 127.0.0.1:6379
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -222,8 +222,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -242,11 +242,11 @@ jobs:
       matrix:
         task: [lint, typecheck, build, test]
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -279,7 +279,7 @@ jobs:
       run:
         working-directory: apps/flutter
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.35.x'
@@ -310,13 +310,13 @@ jobs:
       matrix:
         task: [lint, breaking, codegen]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Fetch base branch
@@ -358,10 +358,10 @@ jobs:
           --health-timeout=5s
           --health-retries=20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Fetch base branch
@@ -397,8 +397,8 @@ jobs:
       matrix:
         task: [govulncheck, license]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -421,9 +421,9 @@ jobs:
       matrix:
         service: [server, realtime, worker]
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/docker/${{ matrix.service }}.Dockerfile
