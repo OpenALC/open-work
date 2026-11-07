@@ -1,21 +1,20 @@
 version: 2
 updates:
-  # ─── Go ───────────────────────────────────────────────────────
-  - package-ecosystem: gomod
+  # ─── GitHub Actions ───────────────────────────────────────────
+  - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
       time: '02:00'
       timezone: UTC
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     groups:
-      go-minor-patch:
+      actions:
         patterns: ['*']
-        update-types: ['minor', 'patch']
     commit-message:
-      prefix: 'chore(deps)'
-    labels: ['dependencies', 'go']
+      prefix: 'ci'
+    labels: ['dependencies', 'ci']
 
   # ─── Node / pnpm ──────────────────────────────────────────────
   - package-ecosystem: npm
@@ -34,31 +33,50 @@ updates:
       prefix: 'chore(deps)'
     labels: ['dependencies', 'web']
 
-  # ─── GitHub Actions ───────────────────────────────────────────
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: '02:00'
-      timezone: UTC
-    open-pull-requests-limit: 3
-    groups:
-      actions:
-        patterns: ['*']
-    commit-message:
-      prefix: 'ci'
-    labels: ['dependencies', 'ci']
-
-  # ─── Docker ───────────────────────────────────────────────────
-  - package-ecosystem: docker
-    directory: /deploy/docker
-    schedule:
-      interval: weekly
-      day: monday
-      time: '02:00'
-      timezone: UTC
-    open-pull-requests-limit: 3
-    commit-message:
-      prefix: 'chore(deploy)'
-    labels: ['dependencies', 'deploy']
+  # ─────────────────────────────────────────────────────────────
+  # 以下条目在对应骨架落地后启用（M0 / L0.1）。
+  # 提前启用会让 Dependabot 因目录或清单文件不存在而持续报错。
+  #
+  # Go 依赖：M0 落地 go.mod 后取消注释
+  # - package-ecosystem: gomod
+  #   directory: /
+  #   schedule:
+  #     interval: weekly
+  #     day: monday
+  #     time: '02:00'
+  #     timezone: UTC
+  #   open-pull-requests-limit: 5
+  #   groups:
+  #     go-minor-patch:
+  #       patterns: ['*']
+  #       update-types: ['minor', 'patch']
+  #   commit-message:
+  #     prefix: 'chore(deps)'
+  #   labels: ['dependencies', 'go']
+  #
+  # Docker 基础镜像：M0 落地 deploy/docker/*.Dockerfile 后取消注释
+  # - package-ecosystem: docker
+  #   directory: /deploy/docker
+  #   schedule:
+  #     interval: weekly
+  #     day: monday
+  #     time: '02:00'
+  #     timezone: UTC
+  #   open-pull-requests-limit: 3
+  #   commit-message:
+  #     prefix: 'chore(deploy)'
+  #   labels: ['dependencies', 'deploy']
+  #
+  # Flutter / pub：M0 落地 apps/flutter/pubspec.yaml 后取消注释
+  # - package-ecosystem: pub
+  #   directory: /apps/flutter
+  #   schedule:
+  #     interval: weekly
+  #     day: monday
+  #     time: '02:00'
+  #     timezone: UTC
+  #   open-pull-requests-limit: 3
+  #   commit-message:
+  #     prefix: 'chore(deps)'
+  #   labels: ['dependencies', 'flutter']
+  # ─────────────────────────────────────────────────────────────
