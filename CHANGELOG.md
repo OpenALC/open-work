@@ -4,7 +4,7 @@
 
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
-版本号格式 `0.MINOR.PATCH`：第一段固定为 `0`，日常只递增后两段（新功能加第二段、修 bug 加第三段），两段均为十进制且不设上限。详见 [docs/development/release.md](docs/development/release.md)。
+版本号格式 `0.MINOR.PATCH`：第一段固定为 `0`；日常只递增第三段（功能实现与缺陷修复都算），只有破坏性变更或里程碑收口才递增第二段。两段均为十进制、不设上限。详见 [docs/development/release.md](docs/development/release.md)。
 
 产品版本、开放 API 版本、Connector SDK 协议版本与数据库迁移版本分别独立管理，
 发布流程见 [docs/development/release.md](docs/development/release.md)。
@@ -30,15 +30,9 @@
 ---
 
 <!--
-发布时按以下格式追加：
+发布时按以下格式追加。纯修复版本在标题后加「(仅修复)」，便于私有化部署判断能否直接升级。
 
-## [0.10.0] - 2026-11-07
-
-### Added
-- feat(im): 部门群 (#123)
-
-### Changed
-- refactor(workflow): 调度器简化 (#130)
+## [0.5.2] (仅修复) - 2026-11-07
 
 ### Fixed
 - fix(auth): 跨租户查询数据泄露 (#140)
@@ -46,7 +40,15 @@
 ### Security
 - 升级 golang.org/x/net 至 0.31.0（CVE-XXXX-XXXX）
 
-[Unreleased]: https://github.com/OpenALC/open-work/compare/v0.10.0...HEAD
-[0.10.0]: https://github.com/OpenALC/open-work/compare/v0.9.3...v0.10.0
-[0.9.3]: https://github.com/OpenALC/open-work/compare/v0.9.2...v0.9.3
+## [0.5.1] - 2026-11-06
+
+### Added
+- feat(im): 部门群 (#123)
+
+### Changed
+- refactor(workflow): 调度器简化 (#130)
+
+[Unreleased]: https://github.com/OpenALC/open-work/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/OpenALC/open-work/compare/v0.5.1...v0.5.2
+[0.5.1]: https://github.com/OpenALC/open-work/compare/v0.5.0...v0.5.1
 -->
