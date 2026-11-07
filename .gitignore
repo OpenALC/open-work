@@ -1,0 +1,79 @@
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.swp
+*.swo
+*~
+
+# 环境与密钥
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials*
+
+# Go
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+coverage.txt
+vendor/
+go.work
+go.work.sum
+
+# Node / 前端
+node_modules/
+.pnpm-store/
+apps/web/dist/
+apps/web/.vite/
+apps/web/coverage/
+*.tsbuildinfo
+.eslintcache
+playwright-report/
+test-results/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-error.log*
+
+# Flutter / Dart
+apps/flutter/.dart_tool/
+apps/flutter/.packages
+apps/flutter/build/
+apps/flutter/.flutter-plugins
+apps/flutter/.flutter-plugins-dependencies
+apps/flutter/ios/Pods/
+apps/flutter/macos/Pods/
+apps/flutter/android/.gradle/
+apps/flutter/android/local.properties
+apps/flutter/linux/flutter/ephemeral/
+apps/flutter/windows/flutter/ephemeral/
+apps/flutter/macos/Flutter/ephemeral/
+*.iml
+
+# 运行时与本地数据
+tmp/
+temp/
+logs/
+*.log
+data/
+.air.toml
+

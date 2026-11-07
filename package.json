@@ -1,0 +1,22 @@
+{
+  "name": "openwork",
+  "version": "0.0.0",
+  "private": true,
+  "description": "OpenWork — 轻量、开源、可扩展的企业协作与管理平台",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "commitlint": "commitlint",
+    "lint": "pnpm -r --if-present run lint",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "build": "pnpm -r --if-present run build",
+    "test": "pnpm -r --if-present run test"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0"
+  }
+}

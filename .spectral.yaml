@@ -1,0 +1,82 @@
+extends:
+  - spectral:oas
+
+rules:
+  # ─── 契约基本要求 ─────────────────────────────────────────────
+  info-contact: off
+  info-license: off
+  oas3-api-servers: warn
+
+  operation-operationId: error
+  operation-operationId-unique: error
+  operation-tag-defined: error
+  operation-description: warn
+  operation-summary: error
+  operation-success-response: error
+
+  # ─── 本项目约定 ───────────────────────────────────────────────
+  openwork-path-versioned:
+    description: 所有业务路径必须以 /api/v1 或更高版本开头
+    message: '路径 {{property}} 缺少版本前缀（/api/v1/...）'
+    severity: error
+    given: $.paths[*]
+    then:
+      field: '@key'
+      function: pattern
+      functionOptions:
+        match: '^/api/v[0-9]+/'
+
+  openwork-permission-declared:
+    description: 每个操作必须声明权限 scope，或显式标注为公开/仅认证
+    message: '操作 {{path}} 未声明权限 scope，请添加 x-permission、x-public 或 x-authenticated'
+    severity: error
+    given: $.paths[*][get,post,put,patch,delete]
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: ['x-permission']
+            - required: ['x-public']
+            - required: ['x-authenticated']
+
+  openwork-error-response:
+    description: 操作必须声明统一错误响应
+    severity: warn
+    given: $.paths[*][get,post,put,patch,delete].responses
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: ['400']
+            - required: ['401']
+
+  openwork-no-plain-text-error:
+    description: 错误响应必须引用统一错误模型
+    severity: warn
+    given: $.paths[*][get,post,put,patch,delete].responses[4*].content
+    then:
+      field: application/json
+      function: truthy
+
+  # ─── 风格 ─────────────────────────────────────────────────────
+  openwork-tags-kebab:
+    description: tag 使用小写单词
+    severity: warn
+    given: $.tags[*].name
+    then:
+      function: pattern
+      functionOptions:
+        match: '^[a-z][a-z0-9-]*$'
+
+  openwork-no-inline-schema:
+    description: 可复用结构应放入 components.schemas
+    severity: info
+    given: $.paths[*][get,post,put,patch,delete].requestBody.content.application/json.schema
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          not:
+            required: ['type']
