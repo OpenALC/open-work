@@ -1,0 +1,253 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: '1.25'
+  NODE_VERSION: '24'
+  PNPM_VERSION: '10'
+
+jobs:
+  # ─── 门禁 ─────────────────────────────────────────────────────
+  commit-lint:
+    name: commit-lint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: git fetch --no-tags origin +refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
+      - run: npx --yes @commitlint/cli@19 --config commitlint.config.mjs --from origin/${{ github.base_ref }} --to HEAD --verbose
+
+  secrets-scan:
+    name: secrets-scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          VERSION=8.21.2
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" | tar -xz -C /usr/local/bin gitleaks
+          gitleaks detect --source . --redact --no-banner --verbose
+
+  # ─── 骨架检测与变更范围 ───────────────────────────────────────
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.s.outputs.go }}
+      web: ${{ steps.s.outputs.web }}
+      flutter: ${{ steps.s.outputs.flutter }}
+      db: ${{ steps.s.outputs.db }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: s
+        run: |
+          set -eu
+          [ -f go.mod ]                    && echo "go=true"      >> "$GITHUB_OUTPUT" || echo "go=false"      >> "$GITHUB_OUTPUT"
+          [ -f apps/web/package.json ]     && echo "web=true"     >> "$GITHUB_OUTPUT" || echo "web=false"     >> "$GITHUB_OUTPUT"
+          [ -f apps/flutter/pubspec.yaml ] && echo "flutter=true" >> "$GITHUB_OUTPUT" || echo "flutter=false" >> "$GITHUB_OUTPUT"
+          ls database/migrations/mysql/*.sql >/dev/null 2>&1 \
+                                           && echo "db=true"      >> "$GITHUB_OUTPUT" || echo "db=false"      >> "$GITHUB_OUTPUT"
+
+  # ─── Go ───────────────────────────────────────────────────────
+  go:
+    name: go
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: format
+        run: test -z "$(gofmt -l .)"
+      - name: vet
+        run: go vet ./...
+      - name: build
+        run: go build ./...
+      - name: test
+        run: go test -race -shuffle=on ./...
+      - name: tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+  go-integration:
+    name: go-integration
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: openwork_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=10
+    env:
+      OPENWORK_DB_DSN: root:root@tcp(127.0.0.1:3306)/openwork_test?parseTime=true&loc=UTC&multiStatements=true
+      OPENWORK_REDIS_ADDR: 127.0.0.1:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: migrate
+        run: go run github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1 -path database/migrations/mysql -database "mysql://$OPENWORK_DB_DSN" up
+      - name: integration tests
+        run: go test -tags=integration -race -shuffle=on -timeout=20m ./...
+
+  # ─── Web ──────────────────────────────────────────────────────
+  web:
+    name: web
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --if-present run lint
+      - run: pnpm -r --if-present run typecheck
+      - run: pnpm -r --if-present run build
+      - run: pnpm -r --if-present run test
+
+  # ─── Flutter ──────────────────────────────────────────────────
+  flutter:
+    name: flutter
+    needs: changes
+    if: needs.changes.outputs.flutter == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/flutter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.x'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --fatal-infos --fatal-warnings
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: flutter test --coverage
+
+  # ─── 迁移 ─────────────────────────────────────────────────────
+  migration:
+    name: migration
+    needs: changes
+    if: needs.changes.outputs.db == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: openwork_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1 -uroot -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: up / down / up
+        env:
+          DSN: mysql://root:root@tcp(127.0.0.1:3306)/openwork_test
+        run: |
+          set -eu
+          M="go run github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1 -path database/migrations/mysql -database $DSN"
+          $M up
+          $M down -all
+          $M up
+
+  # ─── 镜像 ─────────────────────────────────────────────────────
+  image:
+    name: image
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [server, realtime, worker]
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          if [ -f "deploy/docker/${{ matrix.service }}.Dockerfile" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.check.outputs.exists == 'true'
+        uses: docker/setup-buildx-action@v3
+      - if: steps.check.outputs.exists == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/${{ matrix.service }}.Dockerfile
+          push: false
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # ─── 汇总 ─────────────────────────────────────────────────────
+  result:
+    name: result
+    if: always()
+    needs: [commit-lint, secrets-scan, go, go-integration, web, flutter, migration, image]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "检查未通过："
+          echo '${{ toJSON(needs) }}'
+          exit 1

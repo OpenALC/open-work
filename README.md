@@ -67,7 +67,7 @@ make dev-up             # 启动 MySQL + Redis + 三进程
 - API：<http://localhost:8080>
 - 健康检查：<http://localhost:8080/healthz>
 
-详见 [docs/development/getting-started.md](docs/development/getting-started.md)（里程碑 M0 交付）。
+详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 仓库结构
 

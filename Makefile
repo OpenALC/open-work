@@ -214,7 +214,7 @@ flutter-test: ## Flutter 测试
 .PHONY: openapi-lint
 openapi-lint: ## OpenAPI 规范检查
 	@if [ -f docs/api/openapi.yaml ]; then \
-		$(PNPM) dlx @stoplight/spectral-cli@6 lint docs/api/openapi.yaml --ruleset .spectral.yaml; \
+		$(PNPM) dlx @redocly/cli@1 lint docs/api/openapi.yaml; \
 	fi
 
 # ─── 安全 ────────────────────────────────────────────────────────

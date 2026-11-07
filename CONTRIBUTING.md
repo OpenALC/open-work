@@ -40,7 +40,6 @@
 | pnpm | 10+ |
 | Flutter | 3.35+（仅客户端开发需要） |
 | Docker + Compose | 最新稳定版 |
-| golangci-lint | 见 `.golangci.yml` |
 | golang-migrate | 见 Makefile |
 | sqlc | 见 `sqlc.yaml` |
 

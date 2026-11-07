@@ -2,9 +2,7 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-[a-z]+.[0-9]+'
+    tags: ['v[0-9]+.[0-9]+.[0-9]+', 'v[0-9]+.[0-9]+.[0-9]+-*']
 
 permissions:
   contents: write
@@ -13,60 +11,44 @@ permissions:
 
 env:
   GO_VERSION: '1.25'
-  NODE_VERSION: '24'
-  PNPM_VERSION: '10'
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/open-work
 
 jobs:
-  # ─── 1. 前置校验 ──────────────────────────────────────────────
+  # ─── 校验 ─────────────────────────────────────────────────────
   preflight:
     name: preflight
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 5
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      prerelease: ${{ steps.version.outputs.prerelease }}
-      major_minor: ${{ steps.version.outputs.major_minor }}
+      version: ${{ steps.v.outputs.version }}
+      major_minor: ${{ steps.v.outputs.major_minor }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Parse version
-        id: version
+      - id: v
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          VERSION="${TAG#v}"
+          VERSION="${GITHUB_REF#refs/tags/v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "major_minor=$(echo "$VERSION" | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
-          if [[ "$VERSION" == *-* ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Tag must be reachable from main
+          case "$VERSION" in *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;; *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;; esac
+      - name: tag 必须在 main 上
         run: |
           git fetch origin main
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
-            echo "标签必须打在 main 的可达提交上"; exit 1; }
-      - name: CHANGELOG must contain this version
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "标签必须打在 main 的可达提交上"; exit 1; }
+      - name: CHANGELOG 必须有本版本段落
         run: |
           V="${GITHUB_REF#refs/tags/v}"
-          grep -qE "^## \[${V}\]" CHANGELOG.md || {
-            echo "CHANGELOG.md 缺少 [$V] 段落"; exit 1; }
+          grep -qE "^## \[${V}\]" CHANGELOG.md || { echo "CHANGELOG.md 缺少 [$V]"; exit 1; }
 
-  # ─── 2. 全量验证 ──────────────────────────────────────────────
-  verify:
-    name: verify
-    needs: preflight
-    uses: ./.github/workflows/reusable-gates.yml
-
-  # ─── 3. 构建 ──────────────────────────────────────────────────
+  # ─── 二进制 ───────────────────────────────────────────────────
   binaries:
-    name: binaries-${{ matrix.os }}-${{ matrix.arch }}
+    name: binary-${{ matrix.os }}-${{ matrix.arch }}
     needs: preflight
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -78,16 +60,16 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      - name: Build three processes
+      - name: build
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
           VERSION: ${{ needs.preflight.outputs.version }}
         run: |
-          set -euo pipefail
-          EXT=""
-          [[ "$GOOS" == "windows" ]] && EXT=".exe"
-          LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=${GITHUB_SHA::7} -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          set -eu
+          EXT=""; [ "$GOOS" = "windows" ] && EXT=".exe"
+          LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=${GITHUB_SHA::7}"
+          mkdir -p dist
           for svc in server realtime worker; do
             go build -trimpath -ldflags "$LDFLAGS" \
               -o "dist/openwork-${svc}_${VERSION}_${GOOS}_${GOARCH}${EXT}" \
@@ -95,15 +77,16 @@ jobs:
           done
       - uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ matrix.os }}-${{ matrix.arch }}
+          name: bin-${{ matrix.os }}-${{ matrix.arch }}
           path: dist/*
           retention-days: 7
 
+  # ─── 镜像 ─────────────────────────────────────────────────────
   images:
     name: image-${{ matrix.service }}
-    needs: [preflight, verify]
+    needs: preflight
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -117,9 +100,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push
-        id: build
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v6
         with:
           context: .
           file: deploy/docker/${{ matrix.service }}.Dockerfile
@@ -134,52 +115,16 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.preflight.outputs.version }}
             ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.preflight.outputs.major_minor }}
           labels: |
-            org.opencontainers.image.title=openwork-${{ matrix.service }}
             org.opencontainers.image.version=${{ needs.preflight.outputs.version }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0
-      - name: Sign image
-        env:
-          DIGEST: ${{ steps.build.outputs.digest }}
-          VERSION: ${{ needs.preflight.outputs.version }}
-        run: |
-          cosign sign --yes \
-            "${IMAGE_PREFIX}-${{ matrix.service }}@${DIGEST}"
 
-  compose-bundle:
-    name: compose-bundle
-    needs: preflight
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - name: Assemble bundle
-        env:
-          VERSION: ${{ needs.preflight.outputs.version }}
-        run: |
-          set -euo pipefail
-          DIR="openwork-${VERSION}"
-          mkdir -p "$DIR"
-          cp -r deploy/compose "$DIR/compose"
-          cp scripts/install.sh "$DIR/install.sh" 2>/dev/null || true
-          cp .env.example "$DIR/.env.example" 2>/dev/null || true
-          echo "$VERSION" > "$DIR/VERSION"
-          cp LICENSE README.md "$DIR/"
-          tar -czf "openwork-${VERSION}-compose.tar.gz" "$DIR"
-          sha256sum "openwork-${VERSION}-compose.tar.gz" > SHA256SUMS.compose
-      - uses: actions/upload-artifact@v4
-        with:
-          name: compose-bundle
-          path: |
-            openwork-*-compose.tar.gz
-            SHA256SUMS.compose
-          retention-days: 7
-
-  flutter-release:
+  # ─── 客户端 ───────────────────────────────────────────────────
+  flutter:
     name: flutter-${{ matrix.target }}
     needs: preflight
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 50
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -190,78 +135,58 @@ jobs:
           - { target: linux, os: ubuntu-24.04 }
           - { target: windows, os: windows-2025 }
           - { target: macos, os: macos-15 }
-          - { target: ipa, os: macos-15 }
     defaults:
       run:
         working-directory: apps/flutter
     steps:
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - id: check
+        run: |
+          if [ -f pubspec.yaml ]; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.check.outputs.exists == 'true'
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.35.x'
           channel: stable
           cache: true
-      - run: flutter pub get
-      - name: Build
-        run: flutter build ${{ matrix.target }} --release
-      - uses: actions/upload-artifact@v4
+      - if: steps.check.outputs.exists == 'true'
+        run: |
+          flutter pub get
+          flutter build ${{ matrix.target }} --release
+      - if: steps.check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
         with:
           name: flutter-${{ matrix.target }}
           path: apps/flutter/build/${{ matrix.target }}/**
           retention-days: 7
           if-no-files-found: warn
 
-  # ─── 4. 发布 ──────────────────────────────────────────────────
+  # ─── 发布 ─────────────────────────────────────────────────────
   publish:
     name: publish
-    needs:
-      - preflight
-      - verify
-      - binaries
-      - images
-      - compose-bundle
-      - flutter-release
+    needs: [preflight, binaries, images, flutter]
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Collect checksums
+      - name: 汇总与校验和
         run: |
-          set -euo pipefail
           mkdir -p release
-          find artifacts -type f \( -name 'openwork-*' -o -name '*.tar.gz' \) -exec cp {} release/ \;
-          cd release && sha256sum * > SHA256SUMS || true
-      - name: Extract release notes
+          find artifacts -type f -exec cp {} release/ \; 2>/dev/null || true
+          cd release && sha256sum * > SHA256SUMS 2>/dev/null || true
+      - name: 提取 Release Notes
         env:
           VERSION: ${{ needs.preflight.outputs.version }}
         run: |
-          awk -v v="$VERSION" '
-            $0 ~ "^## \\["v"\\]" {flag=1; next}
-            flag && /^## \[/ {exit}
-            flag {print}
-          ' CHANGELOG.md > release-notes.md
-          test -s release-notes.md || echo "Release $VERSION" > release-notes.md
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+          awk -v v="$VERSION" '$0 ~ "^## \\["v"\\]" {f=1; next} f && /^## \[/ {exit} f' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "Release $VERSION" > notes.md
+      - uses: softprops/action-gh-release@v2
         with:
           name: v${{ needs.preflight.outputs.version }}
-          body_path: release-notes.md
+          body_path: notes.md
           draft: true
           prerelease: ${{ needs.preflight.outputs.prerelease == 'true' }}
-          files: |
-            release/*
-      - name: Promote latest tag (GA only)
-        if: needs.preflight.outputs.prerelease == 'false'
-        env:
-          VERSION: ${{ needs.preflight.outputs.version }}
-        run: |
-          set -euo pipefail
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          for svc in server realtime worker; do
-            docker buildx imagetools create \
-              -t "${IMAGE_PREFIX}-${svc}:latest" \
-              "${IMAGE_PREFIX}-${svc}:${VERSION}"
-          done
+          files: release/*

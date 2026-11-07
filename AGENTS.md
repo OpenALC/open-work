@@ -203,20 +203,20 @@ cmd/  ──►  internal/<module>/handler ──►  application ──►  dom
 
 | 情况 | 处理 |
 |---|---|
-| ADR 未覆盖的技术选择 | 按"最小可逆 + 与现有模式一致 + 不引入新依赖"决定，写 `docs/adr/proposed/NNNN-<slug>.md`（状态 `Proposed`），继续执行 |
-| 外部服务/密钥缺失 | 使用内存实现或契约 mock，保留接口，标 `TODO(adapter: <name>)` |
+| ADR 未覆盖的技术选择 | 按"最小可逆 + 与现有模式一致 + 不引入新依赖"决定，在 PR 里写一句"自决：xxx，因为 yyy"，继续执行 |
+| 外部服务/密钥缺失 | 使用内存实现或 mock，保留接口，标 `TODO(adapter: <name>)` |
 | 测试环境不可用 | 使用 CI 服务容器或本地 compose；不得降级为伪集成测试 |
-| 同一 CI 失败连续修复 3 次无效 | 记入 `docs/development/known-issues.md`，在 PR 中标明，继续后续 ST |
-| 与审查 agent 意见不一致 | 以 ADR 为准；无 ADR 则按最保守方案实现并写入 PR 的"需人工决策" |
+| 同一 CI 失败连续修复 3 次无效 | 在 PR 的"遗留"一节记一句，继续后续 ST |
+| 对写法没把握 | 按现有代码的路子来，拿不准就选改动最小的那个 |
 
-### 9.4 必须停下并记录（仍不中断执行，按最保守方案实现）
+### 9.4 必须停下来记一笔（仍不中断执行，按最保守方案实现）
 
 - 数据破坏性迁移（删除列/表、不可逆变更）
 - 许可证变更或新增不兼容依赖
 - 删除或修改已发布的 API
 - 涉及凭据、密钥、加密方案变更
 
-这些写入 PR 的"需人工决策"章节，由里程碑审查处理。
+在 PR 描述里单独列一节说明，等人工确认。
 
 ### 9.5 绝对禁止
 
@@ -249,8 +249,7 @@ cmd/  ──►  internal/<module>/handler ──►  application ──►  dom
 | 新模块 | `internal/<module>/README.md`：职责、对外接口、数据表、依赖 |
 | 新端点 | OpenAPI + 权限码登记 |
 | 用户可见变更 | `CHANGELOG.md` |
-| 新配置项 | `.env.example` + 部署文档 |
-| 已知问题 | `docs/development/known-issues.md` |
+| 新配置项 | `.env.example` 与部署文档 |
 
 ---
 
