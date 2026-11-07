@@ -60,9 +60,42 @@ docker-build
 
 | 日期 | 操作 | 结果 |
 |---|---|---|
-| 2026-11-07 | 重建仓库基线 | 待配置（仓库刚初始化，尚无实际保护规则） |
+| 2026-11-07 | 仓库重建，首次配置分支保护 | 已生效（详见下方实际配置） |
 
-> 配置完成后在此追加记录：日期、变更内容、执行人。
+### 2026-11-07 实际生效配置
+
+```json
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["commit-lint", "secrets-scan"]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "required_approving_review_count": 0
+  },
+  "required_linear_history": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "required_conversation_resolution": true
+}
+```
+
+**与目标配置的偏差（已知并接受）：**
+
+| 项 | 目标 | 实际 | 原因 |
+|---|---|---|---|
+| 必需审批数 | 1–2 | 0 | 当前为单人维护阶段，GitHub 不允许批准自己创建的 PR。若设为 1，`main` 将永久无法合并 |
+| 必需状态检查 | 见 §二 | 仅 `commit-lint`、`secrets-scan` | 其余检查在骨架文件落地前不会触发，未触发的 required check 会被判为 pending 从而永久阻塞 |
+
+**恢复完整保护的触发条件：**
+
+1. 至少 2 名具有写权限的维护者 → 把 `required_approving_review_count` 调整为 1（`release/*` 相关为 2）
+2. 对应骨架合入（M0 完成）→ 按 §二 逐项加入 required status checks
+
+每次调整后更新本表，并执行 §四 的四项验证。
 
 ---
 
