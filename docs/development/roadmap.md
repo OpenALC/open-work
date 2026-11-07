@@ -52,8 +52,9 @@
 | L0.2 数据层 | 迁移体系、连接池、sqlc 管线、事务帮助器、租户作用域静态检查、seed 数据 |
 | L0.3 Outbox | `outbox_events` 表、同事务写入、派发器（租约 + 幂等 + 退避 + 死信）、Worker 任务注册表 |
 | L0.4 认证中间件 | JWT + Redis 会话、刷新令牌轮换、租户解析、幂等键、限流、审计日志表、日志脱敏 |
+| L0.5 设计令牌 | `packages/design-tokens/tokens.json` 单一来源；生成 `build/css/tokens.css` 与 `build/dart/tokens.dart`；语义层（颜色/间距/圆角/字号/行高/阴影/动效）；Naive UI 主题映射；Flutter `ThemeData` 生成；硬编码颜色 lint 规则 |
 
-**出口：** 克隆后 `make dev-up` 能起服务，`/readyz` 返回 200，`make ci` 全绿。
+**出口：** 克隆后 `make dev-up` 能起服务，`/readyz` 返回 200，`make ci` 全绿；改一处令牌能同时反映到 Web 与 Flutter。
 
 ### M1 身份 · 组织 · 权限
 
@@ -116,16 +117,19 @@
 
 | LT | 内容 |
 |---|---|
-| L5.1 Flutter 框架 | 路由、网络层、安全存储、状态管理、原生能力适配器、登录 |
-| L5.2 Flutter IM | 会话消息、离线同步、WS 重连、推送 |
-| L5.3 Flutter 业务 | 审批、打卡（GPS/Wi-Fi/人脸接口层）、公告、工作台 |
-| L5.4 多端构建发布 | Android/iOS/Windows/macOS/Linux 构建、签名 |
-| L5.5 可观测性 | OTel trace/metric/log、关键指标 |
-| L5.6 私有化部署 | compose bundle、安装与升级脚本、备份恢复、部署文档 |
-| L5.7 安全加固 | 隔离 fuzz、限流、审计完整性、依赖升级 |
-| L5.8 GA | 文档、快速开始、升级指南、Release Notes |
+| L5.1 Flutter 界面基础 | 接入 `design-tokens` 生成 `ThemeData`；`apps/flutter/lib/design/` 基础组件层（按钮/输入/列表行/头像/标签/弹窗/骨架屏/空状态，约 15–20 个）；响应式断点（手机/平板/桌面三档）；明暗主题；动效规范 |
+| L5.2 Flutter 框架 | 路由、网络层、安全存储、状态管理、原生能力适配器、登录 |
+| L5.3 Flutter IM | 会话消息、离线同步、WS 重连、推送；气泡、输入区、附件面板等 IM 专用组件 |
+| L5.4 Flutter 业务 | 审批、打卡（GPS/Wi-Fi/人脸接口层）、公告、工作台 |
+| L5.5 多端构建发布 | Android/iOS/Windows/macOS/Linux 构建、签名 |
+| L5.6 可观测性 | OTel trace/metric/log、关键指标 |
+| L5.7 私有化部署 | compose bundle、安装与升级脚本、备份恢复、部署文档 |
+| L5.8 安全加固 | 隔离 fuzz、限流、审计完整性、依赖升级 |
+| L5.9 GA | 文档、快速开始、升级指南、Release Notes |
 
-**出口：** 五端能构建；干净机器上一条命令部署起来；打 `v1.0.0`。
+> L5.1 排在 Flutter 功能之前是有意的：组件层没定型就写业务页面，后面统一视觉要全部返工。
+
+**出口：** 五端能构建；Web 与 Flutter 在同一功能上的字号、行高、圆角、主色一致；干净机器上一条命令部署起来；打 `v1.0.0`。
 
 ---
 
