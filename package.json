@@ -9,14 +9,11 @@
     "pnpm": ">=10"
   },
   "scripts": {
-    "commitlint": "commitlint",
+    "commitlint": "npx --yes @commitlint/cli@19 --config commitlint.config.mjs",
     "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
     "build": "pnpm -r --if-present run build",
-    "test": "pnpm -r --if-present run test"
-  },
-  "devDependencies": {
-    "@commitlint/cli": "^19.6.0",
-    "@commitlint/config-conventional": "^19.6.0"
+    "test": "pnpm -r --if-present run test",
+    "e2e": "pnpm -r --if-present run e2e"
   }
 }

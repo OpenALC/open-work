@@ -1,0 +1,26 @@
+# 代码所有者
+#
+# 用于 PR 自动请求审查。里程碑审查阶段的集中人工审查依赖此文件定位责任人。
+# 组织内团队名按实际建立后替换；单个维护者阶段使用 @ 用户名。
+
+# 默认所有者：所有变更都需要至少一名维护者审查
+*                                           @BBXLang
+
+# 流程与治理文件：改动需要核心维护者审查
+/.github/                                   @BBXLang
+/AGENTS.md                                  @BBXLang
+/CONTRIBUTING.md                            @BBXLang
+/SECURITY.md                                @BBXLang
+/docs/adr/                                  @BBXLang
+/docs/development/                          @BBXLang
+
+# 安全敏感路径
+/internal/iam/                              @BBXLang
+/internal/authorization/                    @BBXLang
+/internal/infrastructure/outbox/            @BBXLang
+/database/migrations/                       @BBXLang
+/deploy/                                    @BBXLang
+
+# 契约：破坏性变更成本最高
+/docs/api/                                  @BBXLang
+/packages/contracts/                        @BBXLang
