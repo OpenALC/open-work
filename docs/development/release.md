@@ -6,15 +6,36 @@
 
 ## 一、版本号
 
-SemVer：`MAJOR.MINOR.PATCH`，预发布加 `-alpha.N` / `-beta.N` / `-rc.N`。
+格式：`0.MINOR.PATCH`
 
-| 变更 | 递增 |
-|---|---|
-| 破坏性 API、不兼容数据库变更、要人工介入的升级步骤 | MAJOR |
-| 新功能、新端点、新模块 | MINOR |
-| 修 bug、性能、文档 | PATCH |
+**第一段固定为 `0`，不随功能更新变化。** 只有在发生根本性重构、与旧版本完全无法衔接时才会改动它（届时另立仓库或另起版本线讨论），日常发版不要碰。
 
-产品版本、API 版本（`/api/v1`）、Connector SDK 协议版本、数据库迁移版本**各自独立**，不互相绑定。
+日常只递增后两段：
+
+| 变更 | 递增 | 示例 |
+|---|---|---|
+| 新功能、新端点、新模块、行为变更 | MINOR（第二段）+1，PATCH 归零 | `0.4.2` → `0.5.0` |
+| 修 bug、性能、文档、安全补丁 | PATCH（第三段）+1 | `0.5.0` → `0.5.1` |
+
+**两段都按十进制递增，不设上限。** `0.9.0` 之后是 `0.10.0`，`0.99.0` 之后是 `0.100.0`；`0.5.9` 之后是 `0.5.10`。不要进位成 `1.0.0`。
+
+预发布后缀：`-alpha.N` / `-beta.N` / `-rc.N`，同样不设上限（`0.10.0-rc.12`）。
+
+产品版本、API 版本（`/api/v1`）、Connector SDK 协议版本、数据库迁移版本**各自独立**，不互相绑定。API 路径里的 `v1` 与此处的产品版本不是一回事，不受首段固定为 0 的影响。
+
+### Git 标签
+
+`v0.MINOR.PATCH`，例如 `v0.10.3`。
+
+`release.yml` 的触发规则用 glob 语法（**不是正则**，"+" 会被当作字面字符）：
+
+```yaml
+tags:
+  - 'v[0-9]*.[0-9]*.[0-9]*'
+  - 'v[0-9]*.[0-9]*.[0-9]*-*'
+```
+
+`[0-9]` 匹配一位数字、`*` 匹配任意字符，因此任意位数都能触发：`v0.9.0`、`v0.10.0`、`v0.100.12`、`v0.10.0-rc.3` 均可。
 
 ---
 
@@ -22,19 +43,19 @@ SemVer：`MAJOR.MINOR.PATCH`，预发布加 `-alpha.N` / `-beta.N` / `-rc.N`。
 
 ```bash
 git switch main && git pull --ff-only
-git switch -c chore/release-v1.2.0
+git switch -c chore/release-v0.10.0
 ```
 
-1. `CHANGELOG.md`：把 `Unreleased` 改成 `## [1.2.0] - YYYY-MM-DD`
+1. `CHANGELOG.md`：把 `Unreleased` 改成 `## [0.10.0] - YYYY-MM-DD`
 2. `docs/api/openapi.yaml` 的 `info.version` 同步
-3. 提交 `chore(release): v1.2.0`，合入 `main`
+3. 提交 `chore(release): v0.10.0`，合入 `main`
 
 然后打标签：
 
 ```bash
 git switch main && git pull --ff-only
-git tag -s v1.2.0 -m "v1.2.0"
-git push origin v1.2.0
+git tag -s v0.10.0 -m "v0.10.0"
+git push origin v0.10.0
 ```
 
 `release.yml` 自动跑，不需要手动传制品。
@@ -117,4 +138,4 @@ git push origin v1.2.0
 | 开放 API `v1` | GA 后至少支持 12 个月，弃用提前 6 个月公告 |
 | 客户端 ↔ 服务端 | 客户端至少兼容前 2 个 minor 的服务端 |
 | Connector SDK | major 内字段只增不删 |
-| 配置项 | 删之前先保留并打警告日志，下个 MAJOR 再删 |
+| 配置项 | 删之前先保留并打警告日志，至少跨一个 MINOR 再删 |

@@ -2,8 +2,9 @@
 
 本项目的所有重要变更都会记录在此文件中。
 
-格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-版本号遵循 [Semantic Versioning 2.0.0](https://semver.org/lang/zh-CN/)。
+格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
+
+版本号格式 `0.MINOR.PATCH`：第一段固定为 `0`，日常只递增后两段（新功能加第二段、修 bug 加第三段），两段均为十进制且不设上限。详见 [docs/development/release.md](docs/development/release.md)。
 
 产品版本、开放 API 版本、Connector SDK 协议版本与数据库迁移版本分别独立管理，
 发布流程见 [docs/development/release.md](docs/development/release.md)。
@@ -31,7 +32,7 @@
 <!--
 发布时按以下格式追加：
 
-## [1.2.0] - 2026-11-07
+## [0.10.0] - 2026-11-07
 
 ### Added
 - feat(im): 部门群 (#123)
@@ -45,6 +46,7 @@
 ### Security
 - 升级 golang.org/x/net 至 0.31.0（CVE-XXXX-XXXX）
 
-[Unreleased]: https://github.com/OpenALC/open-work/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/OpenALC/open-work/compare/v1.1.0...v1.2.0
+[Unreleased]: https://github.com/OpenALC/open-work/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/OpenALC/open-work/compare/v0.9.3...v0.10.0
+[0.9.3]: https://github.com/OpenALC/open-work/compare/v0.9.2...v0.9.3
 -->
